@@ -1,8 +1,6 @@
 #include <MG811.h>
 
 #include <SPI.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
 #define CO2_PIN 33 // GPIO ESP32
 #define v400 4.535
