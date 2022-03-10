@@ -18,7 +18,7 @@ void CO_loop() {
  
  
   sensor_volt = ((float)sensorValue / 1024) * 5.0; 
- RS_gas = (5.0 - sensor_volt) / sensor_volt; // Depend on RL on yor module 
+  RS_gas = (5.0 - sensor_volt) / sensor_volt; // Depend on RL on yor module 
  
  
   ratio = RS_gas / R0; // ratio = RS/R0 
@@ -32,7 +32,7 @@ void CO_loop() {
   Serial.println(ratio); 
   Serial.print("\n\n"); 
  
-  delay(100); 
+  delay(500); 
  
 }
 
@@ -42,7 +42,7 @@ void termo_setup() {
 
   Serial.println("MAX6675 test");
   // wait for MAX chip to stabilize
-  delay(500);
+
 }
 
 void termo_loop() {
@@ -54,7 +54,7 @@ void termo_loop() {
    Serial.println(thermocouple.readFahrenheit());
  
    // For the MAX6675 to update, you must delay AT LEAST 250ms between reads!
-   delay(1000);
+   delay(500);
 }
 
 // CO2 SETUP DAN LOOP
@@ -77,5 +77,5 @@ void CO2_loop(){
   Serial.print(CO2_sens.read());
   Serial.println("ppm");
   
-  delay(2000);
+  delay(500);
 }
