@@ -6,7 +6,7 @@
 #define v400 4.535
 #define v40000 3.206
 
-MG811 CO2_sens = MG811(CO2_PIN);
+MG811 CO2_sens(CO2_PIN);
 
 void setup(){
   CO2_sens.begin(v400, v40000);
