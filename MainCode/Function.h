@@ -16,7 +16,7 @@ void CO_loop() {
  //-Replace the name "R0" with the value of R0 in the demo of First Test -/ 
   float R0 = 0.91; 
  
-  int sensorValue = analogRead(A1);  //PIN SENSOR CO2 = A1
+ 
   sensor_volt = ((float)sensorValue / 1024) * 5.0; 
  RS_gas = (5.0 - sensor_volt) / sensor_volt; // Depend on RL on yor module 
  
