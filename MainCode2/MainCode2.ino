@@ -4,28 +4,29 @@
 
 #include <SPI.h>
 
+#define CALIB_PIN -1 // GPIO ESP32
+
 // CO2 sensor params
-#define CO2_PIN 33 // GPIO ESP32
-#define CALIB_PIN 4 // GPIO ESP32
+#define CO2_SENS_PIN 33 // GPIO ESP32
 
 #define v400 4.535
 #define v40000 3.206
 
 // Thermocouple sensor params
-#define MAX6675_CS 10
-#define MAX6675_MISO 12
-#define MAX6675_SCLK 13
+#define MAX6675_CS 2
+#define MAX6675_MISO 0
+#define MAX6675_SCLK 5
 
 // CO sensor params
 #define BOARD "ESP32"
-#define CO_SENS_PIN 25
+#define CO_SENS_PIN -1
 
 #define TYPE "MQ-9"
 #define VOLT_RESO 5
 #define ADC_BIT_RESO 12
 #define RATIO_MQ9_CLEAN 9.6
 
-MG811 CO2_sens(CO2_PIN);
+MG811 CO2_sens(CO2_SENS_PIN);
 MQUnifiedsensor CO_sens(BOARD, VOLT_RESO, ADC_BIT_RESO, CO_SENS_PIN, TYPE);
 MAX6675 thermocouple(MAX6675_SCLK, MAX6675_CS, MAX6675_MISO);
 
@@ -49,7 +50,7 @@ void MQ9_calibration() {
 }
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(9600);
 
   CO2_sens.begin(v400, v40000);
   pinMode(CALIB_PIN, INPUT);
@@ -60,15 +61,15 @@ void setup() {
     delay(1000);
   }
 
-  if(calib_counter == 3) {
-    CO2_sens.calibrate();
-  }
-
   CO_sens.setRegressionMethod(1);
   CO_sens.setA(1000.5); 
   CO_sens.setB(-2.186);
   CO_sens.init();
-  MQ9_calibration();
+
+  if(calib_counter == 3) {
+    CO2_sens.calibrate();
+    MQ9_calibration();
+  }
 }
 
 void loop() {
@@ -78,15 +79,15 @@ void loop() {
   Serial.println("ppm");
 
   // Get CO data
-  MQ9.update();
+  CO_sens.update();
   Serial.print("CO Concentration: ");
-  Serial.print(MQ9.readSensor());
+  Serial.print(CO_sens.readSensor());
   Serial.println("ppm");
 
   // Get temperature data
-  Serial.print("Temperature:");
+  Serial.print("Temperature: ");
   Serial.print(thermocouple.readCelsius());
-  Serial.println("°C")
+  Serial.println("°C");
 
   delay(2000);
 }
