@@ -15,5 +15,5 @@ This Repository is Emission Gas Project Repository
 - Testing all of the 3 Sensors [Week 2]
 - Testing LoRa ESP communication with the IoT gateway [v]
 - Testing each sensor with LoRa ESP and transmit it to the IoT gateway [CO sensor left]
-- Testing all of the sensors with LoRa ESP and transmit it to the IoT gateway [v]
+- Testing all of the sensors with LoRa ESP and transmit it to the IoT gateway [CO sensor transmitted yet with dummy data]
 - Logging all of the sensors data to our laptop / PC []
