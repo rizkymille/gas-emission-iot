@@ -2,6 +2,8 @@
 #include <MQUnifiedsensor.h>
 #include <MG811.h>
 
+#include <lorawan.h>
+
 #include <SPI.h>
 
 #define CALIB_PIN -1 // GPIO ESP32
@@ -13,7 +15,7 @@
 #define v40000 3.206
 
 // Thermocouple sensor params
-#define MAX6675_CS 2
+#define MAX6675_CS 15
 #define MAX6675_MISO 0
 #define MAX6675_SCLK 5
 
@@ -25,6 +27,36 @@
 #define VOLT_RESO 5
 #define ADC_BIT_RESO 12
 #define RATIO_MQ9_CLEAN 9.6
+
+// LoRa params
+// pins
+#define RFM_ENABLE 32
+#define RFM_CS 2
+#define RFM_RST 13
+#define RFM_DIO0 14
+#define RFM_DIO1 12
+
+#define RFM_FPORT 0
+#define RFM_CHAN 0 // channel range 0-7 
+
+//ABP Credentials
+const char *devAddr = "018229BB";
+const char *nwkSKey = "2541B4A7145935927393358617651B9B";
+const char *appSKey = "BFF2CA2C7191F895365CCF822C3224D1";
+
+const unsigned long interval = 10000;    // 10 s interval to send message
+//unsigned long previousMillis = 0;  // will store last time message sent
+
+char myStr[50];
+int port, channel, freq;
+
+const sRFM_pins RFM_pins = {
+  .CS = RFM_CS,
+  .RST = RFM_RST,
+  .DIO0 = RFM_DIO0,
+  .DIO1 = RFM_DIO1,
+};
+//---------------------------------------
 
 MG811 CO2_sens(CO2_SENS_PIN);
 MQUnifiedsensor CO_sens(BOARD, VOLT_RESO, ADC_BIT_RESO, CO_SENS_PIN, TYPE);
@@ -52,6 +84,8 @@ void MQ9_calibration() {
 void setup() {
   Serial.begin(9600);
 
+  pinMode(RFM_ENABLE, HIGH);
+
   CO2_sens.begin(v400, v40000);
   pinMode(CALIB_PIN, INPUT);
 
@@ -70,24 +104,69 @@ void setup() {
     CO2_sens.calibrate();
     MQ9_calibration();
   }
+
+  while(!lora.init()) {
+    Serial.println("RFM95 not detected!");
+    delay(2000);
+  }
+
+  // Set LoRaWAN Class change CLASS_A or CLASS_C
+  lora.setDeviceClass(CLASS_A);
+
+  // Set Data Rate
+  lora.setDataRate(SF10BW125);
+
+  // Set FramePort Tx
+  lora.setFramePortTx(RFM_FPORT); // set according to fport
+
+  // set channel to channel 0
+  lora.setChannel(RFM_CHAN);
+  //lora.setChannel(MULTI); // set channel to random
+
+  // Set TxPower to 15 dBi (max)
+  lora.setTxPower(15);
+
+  // Put ABP Key and DevAddress here
+  lora.setNwkSKey(nwkSKey);
+  lora.setAppSKey(appSKey);
+  lora.setDevAddr(devAddr);
 }
+
+float CO2_val, CO_val, temp_val;
 
 void loop() {
   // Get CO2 data
+  CO2_val = CO2_sens.read();
   Serial.print("CO2 Concentration: ");
-  Serial.print(CO2_sens.read());
+  Serial.print(CO2_val);
   Serial.println("ppm");
 
   // Get CO data
   CO_sens.update();
+  CO_val = CO_sens.readSensor();
   Serial.print("CO Concentration: ");
-  Serial.print(CO_sens.readSensor());
+  Serial.print(CO_val);
   Serial.println("ppm");
 
   // Get temperature data
+  temp_val = thermocouple.readCelsius();
   Serial.print("Temperature: ");
-  Serial.print(thermocouple.readCelsius());
+  Serial.print(temp_val);
   Serial.println("°C");
 
+  // Send with LoRa
+  sprintf(myStr, "CO2: %.2fppm CO: %.2fppm Temp: %.2f°C", CO2_val, CO_val, temp_val);
+  
+  Serial.print("Sending: \n");
+  Serial.println(myStr);
+  lora.sendUplink(myStr, strlen(myStr), 0);
+  port = lora.getFramePortTx();
+  channel = lora.getChannel();
+  freq = lora.getChannelFreq(channel);
+  Serial.print(F("fport: "));    Serial.print(port);Serial.print(" ");
+  Serial.print(F("Ch: "));    Serial.print(channel);Serial.print(" ");
+  Serial.print(F("Freq: "));    Serial.print(freq);Serial.println(" ");
+
+  lora.update();
   delay(2000);
 }
