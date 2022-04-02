@@ -96,12 +96,15 @@ float MG811::read(){
     @return: none
 */
 void MG811::calibrate(){
+    delay(5000);
+    Serial.println("MG811 calibration mode started");
+    Serial.println("==============================");
     uint8_t i = 0;
     Serial.println("Time (mn) \t\t Measurement (volt)");
     for(i = 0; i < 120; i++){
         delay(60000); // wait 1 minute
         Serial.print(i);
-        Serial.print("\t\t ");
+        Serial.print(" \t\t\t ");
         Serial.println(raw(), 3);
     }
 }

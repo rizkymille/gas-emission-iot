@@ -20,13 +20,14 @@
 #define MAX6675_SCLK 5
 
 // CO sensor params
-#define BOARD "ESP32"
-#define CO_SENS_PIN -1
+#define BOARD "Arduino"
+#define CO_SENS_PIN 35
 
 #define TYPE "MQ-9"
-#define VOLT_RESO 5
+#define VOLT_RESO 3.3
 #define ADC_BIT_RESO 12
 #define RATIO_MQ9_CLEAN 9.6
+#define MQ9_R0 2.1
 
 // LoRa params
 // pins
@@ -44,10 +45,9 @@ const char *devAddr = "018229BB";
 const char *nwkSKey = "2541B4A7145935927393358617651B9B";
 const char *appSKey = "BFF2CA2C7191F895365CCF822C3224D1";
 
-const unsigned long interval = 10000;    // 10 s interval to send message
+//const unsigned long interval = 10000;    // 10 s interval to send message
 //unsigned long previousMillis = 0;  // will store last time message sent
 
-char myStr[50];
 int port, channel, freq;
 
 const sRFM_pins RFM_pins = {
@@ -65,7 +65,7 @@ MAX6675 thermocouple(MAX6675_SCLK, MAX6675_CS, MAX6675_MISO);
 int calib_counter;
 
 void MQ9_calibration() {
-  Serial.print("Calibrating please wait.");
+  Serial.print("MQ9 calibration started");
   float calcR0 = 0;
   for(int i = 1; i<=10; i ++)
   {
@@ -98,6 +98,7 @@ void setup() {
   CO_sens.setRegressionMethod(1);
   CO_sens.setA(1000.5); 
   CO_sens.setB(-2.186);
+  CO_sens.setR0(MQ9_R0);
   CO_sens.init();
 
   if(calib_counter == 3) {
@@ -133,6 +134,8 @@ void setup() {
 }
 
 float CO2_val, CO_val, temp_val;
+//char myStr[35];
+byte sendData[3] = {1, 2, 3};
 
 void loop() {
   // Get CO2 data
@@ -142,6 +145,7 @@ void loop() {
   Serial.println("ppm");
 
   // Get CO data
+  //CO_val = analogRead(CO_SENS_PIN);
   CO_sens.update();
   CO_val = CO_sens.readSensor();
   Serial.print("CO Concentration: ");
@@ -155,11 +159,14 @@ void loop() {
   Serial.println("°C");
 
   // Send with LoRa
-  sprintf(myStr, "CO2: %.2fppm CO: %.2fppm Temp: %.2f°C", CO2_val, CO_val, temp_val);
+  //sprintf(myStr, "CO2:%.2fppmCO:%.2fppmTemp:%.2f°C", CO2_val, CO_val, temp_val);
+  //sprintf(myStr, "hello world");
+  //sprintf(myStr, "%.2f", int(CO2_val);
   
-  Serial.print("Sending: \n");
-  Serial.println(myStr);
-  lora.sendUplink(myStr, strlen(myStr), 0);
+  //Serial.print("Sending: \n");
+  //Serial.println(myStr);
+  lora.sendUplinkHex(sendData, sizeof(sendData), 0);
+  //lora.sendUplink(myStr, strlen(myStr), 0);
   port = lora.getFramePortTx();
   channel = lora.getChannel();
   freq = lora.getChannelFreq(channel);
@@ -168,5 +175,5 @@ void loop() {
   Serial.print(F("Freq: "));    Serial.print(freq);Serial.println(" ");
 
   lora.update();
-  delay(2000);
+  delay(1000);
 }
