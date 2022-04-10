@@ -37,13 +37,13 @@
 #define RFM_DIO0 14
 #define RFM_DIO1 12
 
-#define RFM_FPORT 0
+#define RFM_FPORT 1
 #define RFM_CHAN 0 // channel range 0-7 
 
 //ABP Credentials
-const char *devAddr = "018229BB";
-const char *nwkSKey = "2541B4A7145935927393358617651B9B";
-const char *appSKey = "BFF2CA2C7191F895365CCF822C3224D1";
+const char *devAddr = "260D5728";
+const char *nwkSKey = "3AB71715B5225CA9654D838BBF61FB2B";
+const char *appSKey = "307F9A1909726A248F0FC6B2EB0DED38";
 
 //const unsigned long interval = 10000;    // 10 s interval to send message
 //unsigned long previousMillis = 0;  // will store last time message sent
@@ -134,8 +134,8 @@ void setup() {
 }
 
 float CO2_val, CO_val, temp_val;
-//char myStr[35];
-byte sendData[3] = {1, 2, 3};
+//char myStr[];
+char sendData[3];
 
 void loop() {
   // Get CO2 data
@@ -159,14 +159,10 @@ void loop() {
   Serial.println("°C");
 
   // Send with LoRa
-  //sprintf(myStr, "CO2:%.2fppmCO:%.2fppmTemp:%.2f°C", CO2_val, CO_val, temp_val);
-  //sprintf(myStr, "hello world");
-  //sprintf(myStr, "%.2f", int(CO2_val);
+  sprintf(sendData, "%d,%d,%d", int(CO2_val*100), int(CO_val*100), int(temp_val*100));
   
-  //Serial.print("Sending: \n");
-  //Serial.println(myStr);
-  lora.sendUplinkHex(sendData, sizeof(sendData), 0);
-  //lora.sendUplink(myStr, strlen(myStr), 0);
+  Serial.println(sendData);
+  lora.sendUplink(sendData, strlen(sendData), 1);
   port = lora.getFramePortTx();
   channel = lora.getChannel();
   freq = lora.getChannelFreq(channel);
@@ -175,5 +171,5 @@ void loop() {
   Serial.print(F("Freq: "));    Serial.print(freq);Serial.println(" ");
 
   lora.update();
-  delay(1000);
+  delay(2000);
 }
