@@ -2,6 +2,8 @@ import asyncio
 import struct
 import codecs
 
+from datetime import datetime
+
 PORT = 60000  # Port to listen on (non-privileged ports are > 1023)
 
 def hex_to_int32(hex):
@@ -36,18 +38,28 @@ class EchoServerProtocol(asyncio.Protocol):
         co = int(decoded_payload[1])/100
         temp = int(decoded_payload[2])/100
 
+        datetime_obj = datetime.now()
+        sec = datetime_obj.strftime("%S")      
+
         print(f"Dev ADDR: {dev_addr}, RSSI: {rssi}, SNR: {snr}")
         print(f"CO2: {co2}ppm, CO: {co}ppm, Temperature: {temp} Celsius")
+        file.write(f'{sec}\t{co2}\t{co}\t{temp}\n')
 
 async def main():
     # Get a reference to the event loop as we plan to use
     # low-level APIs.
     loop = asyncio.get_running_loop()
 
+    file.write('Time\tCO2\tCO\tTEMP\n')
+
     server = await loop.create_server(lambda: EchoServerProtocol(), '', PORT)
 
     async with server:
         await server.serve_forever()
         
+    file.close()
 
+datetime_obj = datetime.now()
+date_time = datetime_obj.strftime("%d-%m-%Y_%H-%M-%S")        
+file = open(f'LOG_{date_time}.txt', 'w')
 asyncio.run(main())
