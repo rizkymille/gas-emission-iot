@@ -43,14 +43,14 @@ class EchoServerProtocol(asyncio.Protocol):
 
         print(f"Dev ADDR: {dev_addr}, RSSI: {rssi}, SNR: {snr}")
         print(f"CO2: {co2}ppm, CO: {co}ppm, Temperature: {temp} Celsius")
-        file.write(f'{time}\t{co2}\t{co}\t{temp}\n')
+        file.write(f'{time},{co2},{co},{temp}\n')
 
 async def main():
     # Get a reference to the event loop as we plan to use
     # low-level APIs.
     loop = asyncio.get_running_loop()
 
-    file.write('Time\tCO2\tCO\tTEMP\n')
+    file.write('Time,CO2,CO,TEMP\n')
 
     server = await loop.create_server(lambda: EchoServerProtocol(), '', PORT)
 
@@ -61,5 +61,5 @@ async def main():
 
 datetime_obj = datetime.now()
 date_time = datetime_obj.strftime("%d-%m-%Y_%H-%M-%S")        
-file = open(f'LOG_{date_time}.txt', 'w')
+file = open(f'LOG_{date_time}.csv', 'w')
 asyncio.run(main())
