@@ -82,7 +82,7 @@ void MQ9_calibration() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(57600);
 
   pinMode(RFM_ENABLE, HIGH);
 
@@ -118,7 +118,7 @@ void setup() {
   lora.setDataRate(SF10BW125);
 
   // Set FramePort Tx
-  lora.setFramePortTx(RFM_FPORT); // set according to fport
+  lora.setFramePortTx(RFM_FPORT); // set according to fport, must not 0
 
   // set channel to channel 0
   lora.setChannel(RFM_CHAN);
@@ -131,44 +131,63 @@ void setup() {
   lora.setNwkSKey(nwkSKey);
   lora.setAppSKey(appSKey);
   lora.setDevAddr(devAddr);
+
+  delay(500); // wait sensors to stabilize
 }
 
 float CO2_val, CO_val, temp_val;
-//char myStr[];
-char sendData[3];
+char sendData[];
 
 void loop() {
   // Get CO2 data
   CO2_val = CO2_sens.read();
+  
+
+  // Get CO data
+  CO_sens.update();
+  CO_val = CO_sens.readSensor();
+  
+
+  // Get temperature data
+  temp_val = thermocouple.readCelsius();
+  
+
+  // Pack data
+  sprintf(sendData, "%d,%d,%d", int(CO2_val*100), int(CO_val*100), int(temp_val*100));
+  
+  // Send with LoRa
+  lora.sendUplink(sendData, strlen(sendData), 1);
+
+  /*
+  // print CO2 into serial
   Serial.print("CO2 Concentration: ");
   Serial.print(CO2_val);
   Serial.println("ppm");
 
-  // Get CO data
-  //CO_val = analogRead(CO_SENS_PIN);
-  CO_sens.update();
-  CO_val = CO_sens.readSensor();
+  // print CO into serial
   Serial.print("CO Concentration: ");
   Serial.print(CO_val);
   Serial.println("ppm");
 
-  // Get temperature data
-  temp_val = thermocouple.readCelsius();
+  // print temperature into serial
   Serial.print("Temperature: ");
   Serial.print(temp_val);
   Serial.println("°C");
 
-  // Send with LoRa
-  sprintf(sendData, "%d,%d,%d", int(CO2_val*100), int(CO_val*100), int(temp_val*100));
-  
+  // print sent data into serial
   Serial.println(sendData);
-  lora.sendUplink(sendData, strlen(sendData), 1);
+  
+  // print fport, channel and freq into serial
   port = lora.getFramePortTx();
   channel = lora.getChannel();
   freq = lora.getChannelFreq(channel);
   Serial.print(F("fport: "));    Serial.print(port);Serial.print(" ");
   Serial.print(F("Ch: "));    Serial.print(channel);Serial.print(" ");
   Serial.print(F("Freq: "));    Serial.print(freq);Serial.println(" ");
+
+  dijadiin comment karena kayaknya ada masalah antara serial port ESP32 Aurora
+  ke PC sama port SPI. Tapi belum dites. 
+  */
 
   lora.update();
   delay(2000);
