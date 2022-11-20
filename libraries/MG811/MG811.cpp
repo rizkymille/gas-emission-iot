@@ -10,14 +10,17 @@
 /**
     Constructor
 */
-MG811::MG811(uint8_t input = A0){
+MG811::MG811(float v_res, int adc_bit, int input, float ratio_clean_air, float ratio_dirty_air){
     _input = input;
-    _V400 = 4.535;  // init value - must be calibrated
-    _V40000 = 3.206; // init value - must be calibrated
+    _adc_bit = pow(2, adc_bit) - 1;
+    _v_res = v_res;
+    v_clean_air = ratio_clean_air*v_res;
+    v_dirty_air = ratio_dirty_air*v_res;
+    _a = (ratio_clean_air*v_res - ratio_dirty_air*v_res)/(log10(400) - log10(40000)); // Delta V
 }
 
 /**
-    function: begin
+    function: init
     @summary: Initialize the usage of the sensor with calibrated value
     @parameter:
         v400: the voltage measured by the sensor when placed in a 400ppm C02 
@@ -26,9 +29,9 @@ MG811::MG811(uint8_t input = A0){
               environment
     @return: none
 */
-void MG811::begin(float v400, float v40000){
-    _V400 = v400;
-    _V40000 = v40000;
+void MG811::init(int time_in_ms) {
+    pinMode(_input, INPUT);
+    sampling_time = time_in_ms;
 }
 
 /**
@@ -38,15 +41,18 @@ void MG811::begin(float v400, float v40000){
     @return:
         float: return the voltage measured from the sensor
 */
-float MG811::raw(){
-    uint8_t i = 0;
-    float buffer = 0;
-    for(i = 0; i < 10; i++){
-        buffer += analogRead(_input);
-        delay(20); // 20ms
+float MG811::raw(bool bit){
+    if(!bit) {
+        float read, avg;
+        int i;
+        for (i = 0; i < 5; i++) {
+            read += analogRead(_input);
+            delay(sampling_time);
+        }
+        avg = read / i;
+        return avg*_v_res/_adc_bit;
     }
-    buffer /= i; // compute the mean
-    return map(buffer, 0, 1023, 0, 5);
+    else return analogRead(_input);
 }
 
 /**
@@ -64,11 +70,9 @@ float MG811::raw(){
             <CO2 ppm> = pow(10, C)
 */
 float MG811::read(){
-    float buffer = 0;
-    buffer = (_V400 - _V40000)/(log10(400) - log10(40000)); // Delta V
-    buffer = (raw() - _V400)/buffer;
-    buffer += log10(400);
-    return pow(10, buffer);
+    static float C;
+    C = (raw() - v_clean_air)/_a + log10(400);
+    return pow(10, C);
 }
 
 /**
@@ -95,18 +99,21 @@ float MG811::read(){
     @parameter: none
     @return: none
 */
-void MG811::calibrate(){
-    delay(5000);
-    Serial.println("MG811 calibration mode started");
-    Serial.println("==============================");
-    uint8_t i = 0;
-    Serial.println("Time (mn) \t\t Measurement (volt)");
-    for(i = 0; i < 120; i++){
-        delay(60000); // wait 1 minute
-        Serial.print(i);
-        Serial.print(" \t\t\t ");
-        Serial.println(raw(), 3);
+void MG811::calibrate(bool mode, int duration_in_s, int sampling_time_in_s){
+    delay(3000);
+    Serial.println("Entering MG811 calibration");
+    Serial.printf("Mode: %s\n", mode ? "Clean Air" : "Dirty Air");
+    Serial.println("Ratio");
+    float read, avg;
+    int i;
+    for(i = 0; i < duration_in_s; i++){
+        read += raw();
+        delay(sampling_time_in_s*1000);
     }
+    avg = read / i;
+    Serial.printf("Average: %f\n", avg);
+    if(mode) v_clean_air = avg;
+    else v_dirty_air = avg;
 }
 
 

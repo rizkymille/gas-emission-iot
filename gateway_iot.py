@@ -61,10 +61,10 @@ class EchoServerProtocol(asyncio.Protocol):
         decoded_payload = bytearray.fromhex(payload).decode()
 
         # slice message
-        decoded_payload = decoded_payload.split(',')
-        co2 = int(decoded_payload[0])/100
-        co = int(decoded_payload[1])/100
-        temp = int(decoded_payload[2])/100
+        decoded_payload = decoded_payload.split('/')
+        co2 = decoded_payload[0]
+        co = decoded_payload[1]
+        temp = decoded_payload[2]
 
         # get time info for logger
         datetime_obj = datetime.now()
