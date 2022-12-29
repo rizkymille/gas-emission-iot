@@ -47,83 +47,23 @@ const sRFM_pins RFM_pins = {
 
 MG811 CO2_sens(V_RES, ADC_BIT, CO2_SENS_PIN);
 MQUnifiedsensor CO_sens(BOARD, V_RES, ADC_BIT, CO_SENS_PIN, TYPE);
-SerialTransfer serialParser;
-
-void sendLora() {
-  static float CO2_val, CO_val, temp_val;
-  static int status;
-
-  // Get CO2 data
-  CO2_val = CO2_sens.read();
-  
-  // Get CO data
-  CO_sens.update();
-  CO_val = CO_sens.readSensor();
-  
-  // Get temperature data
-  temp_val = getTemperatureData();
-  
-  // Pack data
-  //sprintf(sendData, "%f/%f/%f", CO2_val, CO_val, temp_val);
-  
-  // Send with LoRa
-  //lora.sendUplink(sendData, strlen(sendData), 1);
-
-  // print CO2 into serial
-  Serial.print("CO2 Concentration: ");
-  Serial.print(CO2_val);
-  Serial.println("ppm");
-
-  // print CO into serial
-  Serial.print("CO Concentration: ");
-  Serial.print(CO_val);
-  Serial.println("ppm");
-
-  // print temperature into serial
-  Serial.print("Temperature: ");
-  Serial.print(status);
-  Serial.println("°C");
-
-  /*
-  // print sent data into serial
-  Serial.println(sendData);
-  
-  // print fport, channel and freq into serial
-  Serial.print(F("fport: "));    Serial.print(lora.getFramePortTx());Serial.print(" ");
-  Serial.print(F("Ch: "));    Serial.print(lora.getChannel());Serial.print(" ");
-  Serial.print(F("Freq: "));    Serial.print(lora.getChannelFreq(channel));Serial.println(" ");
-
-  dijadiin comment karena kayaknya ada masalah antara serial port ESP32 Aurora
-  ke PC sama port SPI. Tapi belum dites. 
-
-  lora.update();
-  */
-}
+SerialTransfer myTransfer;
 
 float getTemperatureData() {
-  static uint16_t sendSize, recSize;
-  static float temp;
-  // change to interrupt mode later
-  sendSize = 0;
-  sendSize = serialParser.txObj("G", sendSize);
-  serialParser.sendData(sendSize);
+  String recieve;
 
-  while (serialParser.available()) {
-    recSize = 0;
-    recSize = serialParser.rxObj(temp, recSize);
-  }
+  Serial.print("G\0");
+  
+  char *terminator = "\0";
+  recieve = Serial.readStringUntil(*terminator);
 
-  sendSize = 0;
-  sendSize = serialParser.txObj("R", sendSize);
-  serialParser.sendData(sendSize);
-
+  float temp = recieve.toFloat();
   return temp;
 }
 
 void setup() {
   Serial.begin(115200);
-  Serial1.begin(115200);
-  serialParser.begin(Serial1);
+  myTransfer.begin(Serial);
 
   digitalWrite(RFM_ENABLE, HIGH);
 
@@ -164,6 +104,52 @@ void setup() {
   delay(500); // wait sensors to stabilize
 }
 
-//char sendData[];
+float CO2_val, CO_val, temp_val;
+String sendLora;
 
-void loop() {}
+void loop() {
+  // Get CO2 data
+  CO2_val = CO2_sens.read();
+  
+  // Get CO data
+  CO_sens.update();
+  CO_val = CO_sens.readSensor();
+  
+  // Get temperature data
+  temp_val = getTemperatureData();
+  
+  // Pack data
+  sendLora = String(CO2_val) + "/" + String(CO_val) + "/" + String(temp_val);
+
+  // Send with LoRa
+  lora.sendUplink((char*)sendLora.c_str(), sendLora.length(), 1);
+
+  // print CO2 into serial
+  /*
+  Serial.print("CO2 Concentration: ");
+  Serial.print(CO2_val);
+  Serial.println("ppm");
+
+  // print CO into serial
+  Serial.print("CO Concentration: ");
+  Serial.print(CO_val);
+  Serial.println("ppm");
+
+  // print temperature into serial
+  Serial.print("Temperature: ");
+  Serial.print(status);
+  Serial.println("°C");
+
+  // print sent data into serial
+  Serial.println(sendData);
+  
+  // print fport, channel and freq into serial
+  Serial.print(F("fport: "));    Serial.print(lora.getFramePortTx());Serial.print(" ");
+  Serial.print(F("Ch: "));    Serial.print(lora.getChannel());Serial.print(" ");
+  Serial.print(F("Freq: "));    Serial.print(lora.getChannelFreq(channel));Serial.println(" ");
+  */
+
+  lora.update();
+
+  delay(5000); // delay every 5 seconds
+}

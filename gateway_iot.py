@@ -1,6 +1,5 @@
 import asyncio
 import struct
-import codecs
 
 from datetime import datetime
 
@@ -8,8 +7,6 @@ import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 
-import collections
-import numpy as np
 
 PORT = 60000  # Port to listen on (non-privileged ports are > 1023)
 
@@ -19,8 +16,8 @@ temp_plots = None
 
 # hex to int decrypter
 def hex_to_int32(hex):
-    int = struct.unpack("!i", codecs.decode(hex, "hex"))
-    return int[0]
+    int = struct.unpack("!i", bytes.fromhex(hex))[0]
+    return int
 
 '''
 live updating plot function. not tested yet
@@ -121,6 +118,8 @@ if __name__ == '__main__':
         asyncio.run(main())
     # show graph when exiting
     except KeyboardInterrupt:
+        sys.exit(0)
+        '''
         try:
             file.close()
             print('Logging stopped')
@@ -130,6 +129,7 @@ if __name__ == '__main__':
         # finally exit program
         except KeyboardInterrupt:
             sys.exit(0)   
+            '''
 
 
         
