@@ -3,6 +3,9 @@
 #include "lorawan.h"
 #include "SerialTransfer.h"
 
+constexpr int SECONDS_TO_MS = 1000;
+constexpr int SAMPLING_RATE = 30 * SECONDS_TO_MS;
+
 #define CALIB_PIN -1 // GPIO ESP32
 
 // CO2 sensor params
@@ -50,15 +53,14 @@ MQUnifiedsensor CO_sens(BOARD, V_RES, ADC_BIT, CO_SENS_PIN, TYPE);
 SerialTransfer myTransfer;
 
 float getTemperatureData() {
-  String recieve;
+  static String recieve;
 
   Serial.print("G\0");
   
-  char *terminator = "\0";
+  static char *terminator = "\0";
   recieve = Serial.readStringUntil(*terminator);
 
-  float temp = recieve.toFloat();
-  return temp;
+  return recieve.toFloat();
 }
 
 void setup() {
@@ -104,10 +106,9 @@ void setup() {
   delay(500); // wait sensors to stabilize
 }
 
-float CO2_val, CO_val, temp_val;
-String sendLora;
-
 void loop() {
+  static float CO2_val, CO_val, temp_val;
+  static String sendLora;
   // Get CO2 data
   CO2_val = CO2_sens.read();
   
@@ -124,32 +125,7 @@ void loop() {
   // Send with LoRa
   lora.sendUplink((char*)sendLora.c_str(), sendLora.length(), 1);
 
-  // print CO2 into serial
-  /*
-  Serial.print("CO2 Concentration: ");
-  Serial.print(CO2_val);
-  Serial.println("ppm");
-
-  // print CO into serial
-  Serial.print("CO Concentration: ");
-  Serial.print(CO_val);
-  Serial.println("ppm");
-
-  // print temperature into serial
-  Serial.print("Temperature: ");
-  Serial.print(status);
-  Serial.println("°C");
-
-  // print sent data into serial
-  Serial.println(sendData);
-  
-  // print fport, channel and freq into serial
-  Serial.print(F("fport: "));    Serial.print(lora.getFramePortTx());Serial.print(" ");
-  Serial.print(F("Ch: "));    Serial.print(lora.getChannel());Serial.print(" ");
-  Serial.print(F("Freq: "));    Serial.print(lora.getChannelFreq(channel));Serial.println(" ");
-  */
-
   lora.update();
 
-  delay(5000); // delay every 5 seconds
+  delay(SAMPLING_RATE); // delay every 5 seconds
 }

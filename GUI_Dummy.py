@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import ImageTk, Image
+
+if not hasattr(Image, 'Resampling'):  # Pillow<9.0
+   Image.Resampling = Image
+
 plt.style.use('fast')
 
 x_vals = []
@@ -44,34 +48,33 @@ def animate(i):
 
 
 # Main window n GUI
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("Sensor GUI Prototype")
+    root.geometry("880x700")
+
+    gbrUI = Image.open("Makara_of_Universitas_Indonesia.png")
+    gbrUI = gbrUI.resize((75,75), Image.Resampling.LANCZOS)
+    gbrUI = ImageTk.PhotoImage(gbrUI)
 
 
-root = tk.Tk()
-root.title("Sensor GUI Prototype")
-root.geometry("880x700")
+    root.columnconfigure(0, weight=1, minsize=20)
+    root.rowconfigure(1, weight=1, minsize=20)
+    root.configure(background='white')
 
-gbrUI = Image.open("Insert Photo Location")
-gbrUI = gbrUI.resize((75,75), Image.Resampling.LANCZOS)
-gbrUI = ImageTk.PhotoImage(gbrUI)
+    label = ttk.Label(root, image=gbrUI)
+    label.grid(column=0, row=0, sticky=tk.W, padx=30, pady=30)
+    label.image = gbrUI
+    label.configure(background='white')
 
+    label2 = ttk.Label(root, text="Smart Emission Monitoring System Universitas Indonesia",font=("Arial", 20),anchor='w')
+    label2.grid(column=1, row=0, padx=20, pady=5, sticky=tk.W)
+    label2.configure(background='white')
 
-root.columnconfigure(0, weight=1, minsize=20)
-root.rowconfigure(1, weight=1, minsize=20)
-root.configure(background='white')
+    canvas = FigureCanvasTkAgg(plt.gcf(), master=root)
+    canvas.get_tk_widget().grid(column=0, row=1,ipadx=20, ipady=10,columnspan=3, sticky=tk.NSEW)
 
-label = ttk.Label(root, image=gbrUI)
-label.grid(column=0, row=0, sticky=tk.W, padx=30, pady=30)
-label.image = gbrUI
-label.configure(background='white')
+    plt.gcf().subplots(3,1)
+    ani = FuncAnimation(plt.gcf(), animate, interval=1000, blit=False)
 
-label2 = ttk.Label(root, text="Smart Emission Monitoring System Universitas Indonesia",font=("Arial", 20),anchor='w')
-label2.grid(column=1, row=0, padx=20, pady=5, sticky=tk.W)
-label2.configure(background='white')
-
-canvas = FigureCanvasTkAgg(plt.gcf(), master=root)
-canvas.get_tk_widget().grid(column=0, row=1,ipadx=20, ipady=10,columnspan=3, sticky=tk.NSEW)
-
-plt.gcf().subplots(3,1)
-ani = FuncAnimation(plt.gcf(), animate, interval=1000, blit=False)
-
-tk.mainloop()
+    tk.mainloop()

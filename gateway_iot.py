@@ -3,9 +3,7 @@ import struct
 
 from datetime import datetime
 
-import pandas as pd
 import sys
-import matplotlib.pyplot as plt
 
 
 PORT = 60000  # Port to listen on (non-privileged ports are > 1023)

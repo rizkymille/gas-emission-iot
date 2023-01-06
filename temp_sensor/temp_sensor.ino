@@ -7,18 +7,18 @@
 
 MAX6675 thermocouple(MAX6675_SCLK, MAX6675_CS, MAX6675_MISO);
 
-String recieve;
-
 void setup() {
   Serial.begin(115200);
 }
 
 void loop() {
+  static float temp;
+  static String recieve;
   
-  recieve = Serial.readStringUntil("\0");
+  if (Serial.available() > 0) recieve = Serial.readStringUntil("\0");
 
   if (recieve == "G") {
-    float temp = thermocouple.readCelsius();
+    temp = thermocouple.readCelsius();
     delay(100);
     Serial.print(temp);
   }
