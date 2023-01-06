@@ -8,7 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import ImageTk, Image
 plt.style.use('fast')
 
-csv_data = ps.read_csv('CSV Location')
+csv_data = ps.read_csv('Csv Location')
 
 x_vals = []
 #CO
@@ -22,19 +22,12 @@ y_vals = []
 y_vals2 = []
 y_vals3 = []
 
-y_valspred = []
-y_valspred2 = []
-y_valspred3 = []
-
 
 def animate(i):
     x_vals.append(i)
     y_vals.append(CO[i])
     y_vals2.append(CO2[i])
     y_vals3.append(TEMP[i])
-    y_valspred.append(random.randint(1, 3))
-    y_valspred2.append(random.randint(1, 3))
-    y_valspred3.append(random.randint(1, 3))
     
     print(CO[i], CO2[i], TEMP[i])
     
@@ -44,9 +37,9 @@ def animate(i):
     ax2.clear()
     ax3.clear()
 
-    ax1.plot(x_vals, y_vals,'r',x_vals, y_valspred,'r--')
-    ax2.plot(x_vals, y_vals2,'b',x_vals, y_valspred2,'b--')
-    ax3.plot(x_vals, y_vals3,'g',x_vals, y_valspred3,'g--')
+    ax1.plot(x_vals, y_vals,'r')
+    ax2.plot(x_vals, y_vals2,'b')
+    ax3.plot(x_vals, y_vals3,'g')
     
     ax1.set_xlim([i-5,i+5])
     ax2.set_xlim([i-5,i+5])
@@ -63,7 +56,7 @@ root = tk.Tk()
 root.title("Sensor GUI Prototype")
 root.geometry("880x700")
 
-gbrUI = Image.open("Insert Photo Location")
+gbrUI = Image.open("Photo Location")
 gbrUI = gbrUI.resize((75,75), Image.Resampling.LANCZOS)
 gbrUI = ImageTk.PhotoImage(gbrUI)
 
