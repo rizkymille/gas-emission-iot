@@ -67,7 +67,7 @@ class EchoServerProtocol(asyncio.Protocol):
 
         # print data to terminal
         print(f"Dev ADDR: {dev_addr}, RSSI: {rssi}, SNR: {snr}")
-        print(f"CO2: {co2}ppm, CO: {co}ppm, Temperature: {temp} Celsius")
+        print(f"CO2: {co2}ppm, CO: {co}ppm, Temperature: {temp}°C")
         
         file.write(f'{time},{co2},{co},{temp}\n') # write to logger
 

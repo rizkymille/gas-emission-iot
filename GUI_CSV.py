@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import tkinter as tk
 from tkinter import ttk
 import matplotlib.pyplot as plt
@@ -41,9 +40,7 @@ def animate(i):
     
     ax1, ax2, ax3 = plt.gcf().get_axes()
 
-    ax1.clear()
-    ax2.clear()
-    ax3.clear()
+    plt.cla()
 
     ax1.plot(x_vals, y_vals,'r')
     ax2.plot(x_vals, y_vals2,'b')
@@ -64,9 +61,9 @@ def animate(i):
     ax2.set_xlim([xmin, xmax])
     ax3.set_xlim([xmin, xmax])
 
-    ax1.set_ylim([0, max(CO[i]+10, 10)])
-    ax2.set_ylim([0, max(CO2[i]+10, 10)])
-    ax3.set_ylim([0, max(TEMP[i]+5, 30)])
+    ax1.set_ylim([max(CO[i]-10, 0), max(CO[i]+10, 10)])
+    ax2.set_ylim([max(CO2[i]-10, 0), max(CO2[i]+10, 10)])
+    ax3.set_ylim([max(TEMP[i]-5, 0), max(TEMP[i]+5, 30)])
 
 def quit(event):
     print("exiting...")
