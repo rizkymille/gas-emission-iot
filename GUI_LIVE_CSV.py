@@ -10,12 +10,12 @@ from PIL import ImageTk, Image
 
 PORT = 60000  # Port to listen on (non-privileged ports are > 1023)
 
-msg_cnt = 0
-index = 0
 co2_plots = np.array([])
 co_plots = np.array([])
 temp_plots = np.array([])
 x_plots = np.array([])
+index = 0
+file = None
 
 if not hasattr(Image, 'Resampling'):  # Pillow<9.0
    Image.Resampling = Image
@@ -27,74 +27,65 @@ def hex_to_int32(hex):
     return struct.unpack("!i", bytes.fromhex(hex))[0]
 '''
 
-def update_plots(data_plots, data, axes, color):
-    np.append(data_plots, data)
+class EchoServerProtocol(asyncio.Protocol):
 
-    axes.plot(x_plots, data, color)
+    # print incoming data
+    def data_received(self, data):
+        message = data.decode()
 
-    axes.set_ylim([0, max(data+5, 30)])
+        '''
+        data 0-8: DEV_ADDR
+        data 10-17: RSSI
+        data 18-25: SNR
+        data 25-etc: data
+        '''
+        # slice data
+        dev_addr = message[:8]
+        payload = message[25:len(message)-3]
+        decoded_payload = bytearray.fromhex(payload).decode()
 
-async def handleData(reader):
-    data = await reader.read()
-    message = data.decode()
+        # slice message
+        decoded_payload = decoded_payload.split('/')
+        co2 = float(decoded_payload[0])
+        co = float(decoded_payload[1])
+        temp = float(decoded_payload[2])
 
-    '''
-    data 0-8: DEV_ADDR
-    data 10-17: RSSI
-    data 18-25: SNR
-    data 25-etc: data (CO:float/CO2:float/TEMP:float)
-    '''
-    # slice data
-    dev_addr = message[:8]
-    decoded_payload = bytearray.fromhex(message[25:len(message)-3]).decode()
-
-    global msg_cnt
-    if msg_cnt == 0:
+        # get time info for logger
         datetime_obj = datetime.now()
-        date_time = datetime_obj.strftime("%d-%m-%Y_%H-%M-%S")        
-        file = open(f'LOG_{date_time}.csv', 'w')
-        msg_cnt += 1
+        time = datetime_obj.strftime("%H:%M:%S")      
 
-    # slice message
-    decoded_payload = decoded_payload.split('/')
-    co2 = decoded_payload[0]
-    co = decoded_payload[1]
-    temp = decoded_payload[2]
+        global index, file
+        if index == 0:
+            file.write('Time,CO2,CO,TEMP\n')
 
-    # get time info for logger
-    datetime_obj = datetime.now()
-    time = datetime_obj.strftime("%H:%M:%S")      
+        # print data to terminal
+        file.write(f'{time},{co2},{co},{temp}\n') # write to logger
 
-    # print data to terminal
-    #print(f"Dev ADDR: {dev_addr}")
-    #print(f"CO2: {co2}ppm, CO: {co}ppm, Temp: {temp}°C")
-    
-    file.write(f'{time},{co2},{co},{temp}\n') # write to logger
+        plt.cla()
 
-    plt.cla()
+        global x_plots, co_plots, co2_plots, temp_plots
+        
+        np.append(x_plots, index)
+        np.append(co_plots, co)
+        np.append(co2_plots, co2)
+        np.append(temp_plots, temp)
+        
+        ax1.set_xlim([max(index-10, 0), max(index, 10)])
+        ax2.set_xlim([max(index-10, 0), max(index, 10)])
+        ax3.set_xlim([max(index-10, 0), max(index, 10)])
 
-    global index, co_plots, co2_plots, temp_plots
-    
-    if (index > 10): 
-        np.delete(co_plots, 0)
-        np.delete(co2_plots, 0)
-        np.delete(temp_plots, 0)
-    
-    np.append(x_plots, index)
-    update_plots(co_plots, co, ax1, 'r')
-    update_plots(co2_plots, co2, ax2, 'b')
-    update_plots(temp_plots, temp, ax3, 'g')
+        ax1.set_ylim([max(co-5, 0), max(co+5, 30)])
+        ax2.set_ylim([max(co2-5, 0), max(co2+5, 30)])
+        ax3.set_ylim([max(temp-5, 0), max(temp+5, 30)])
 
-    ax1.set_xlim([max(index-10, 0), index])
-    ax2.set_xlim([max(index-10, 0), index])
-    ax3.set_xlim([max(index-10, 0), index])
-    
-    # print(CO[i], CO2[i], TEMP[i])
-    index += index
+        ax1.plot(x_plots, co_plots, 'r')
+        ax2.plot(x_plots, co2_plots, 'b')
+        ax3.plot(x_plots, temp_plots, 'g')
 
-    plt.pause(0.1)
-    root.update()
-
+        # print(CO[i], CO2[i], TEMP[i])
+        index += 1
+        plt.draw()
+        root.update()
 
 def draw_init(ax1, ax2, ax3):
     ax1.set_title("Kadar CO")
@@ -106,7 +97,10 @@ def draw_init(ax1, ax2, ax3):
     ax3.set_ylabel("°C")
 
 async def _asyncio_thread():
-    server = await asyncio.start_server(handleData, '', PORT)
+
+    loop = asyncio.get_running_loop()
+
+    server = await loop.create_server(lambda: EchoServerProtocol(), '', PORT)
 
     #addr = server.sockets[0].getsockname()
     #print(f'Serving on {addr}')
@@ -114,13 +108,12 @@ async def _asyncio_thread():
     async with server:
         await server.serve_forever()
 
-
-def quit():
-    print("exiting...")
-    root.quit()
-
 # Main window n GUI
 if __name__ == "__main__" :
+    datetime_obj = datetime.now()
+    date_time = datetime_obj.strftime("%d-%m-%Y_%H-%M-%S")        
+    file = open(f'LOG_{date_time}.csv', 'w')
+
     root = tk.Tk()
     root.title("Sensor GUI Prototype")
     root.geometry("880x700")
@@ -128,8 +121,6 @@ if __name__ == "__main__" :
     gbrUI = Image.open("Makara_of_Universitas_Indonesia.png")
     gbrUI = gbrUI.resize((75,75), Image.Resampling.LANCZOS)
     gbrUI = ImageTk.PhotoImage(gbrUI)
-
-    root.bind('<Escape>', quit)
 
     root.columnconfigure(0, weight=1, minsize=20)
     root.rowconfigure(1, weight=1, minsize=20)

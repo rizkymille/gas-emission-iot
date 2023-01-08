@@ -4,7 +4,7 @@
 #include "SerialTransfer.h"
 
 constexpr int SECONDS_TO_MS = 1000;
-constexpr int SAMPLING_RATE = 30 * SECONDS_TO_MS;
+constexpr int SAMPLING_RATE = 10 * SECONDS_TO_MS;
 
 #define CALIB_PIN -1 // GPIO ESP32
 
@@ -19,7 +19,7 @@ constexpr int SAMPLING_RATE = 30 * SECONDS_TO_MS;
 #define V_RES 3.3
 #define ADC_BIT 12
 #define RATIO_MQ9_CLEAN 9.6
-#define MQ9_R0 2.1
+#define MQ9_R0 9.1
 
 // LoRa params
 // pins
@@ -50,7 +50,6 @@ const sRFM_pins RFM_pins = {
 
 MG811 CO2_sens(V_RES, ADC_BIT, CO2_SENS_PIN);
 MQUnifiedsensor CO_sens(BOARD, V_RES, ADC_BIT, CO_SENS_PIN, TYPE);
-SerialTransfer myTransfer;
 
 float getTemperatureData() {
   static String recieve;
@@ -65,13 +64,20 @@ float getTemperatureData() {
 
 void setup() {
   Serial.begin(115200);
-  myTransfer.begin(Serial);
 
   digitalWrite(RFM_ENABLE, HIGH);
 
   CO_sens.setRegressionMethod(1);
   CO_sens.setA(1000.5); 
   CO_sens.setB(-2.186);
+  /*
+  float calcR0 = 0;
+  for(int i = 0; i <= 10; i++) {
+    CO_sens.update();
+    calcR0 += CO_sens.calibrate(RATIO_MQ9_CLEAN);
+  }
+  calcR0 /= 10;
+  */
   CO_sens.setR0(MQ9_R0);
   CO_sens.init();
 

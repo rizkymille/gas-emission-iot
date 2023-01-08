@@ -36,7 +36,7 @@ class EchoServerProtocol(asyncio.Protocol):
     # print incoming connection
     def connection_made(self, transport):
         peername = transport.get_extra_info('peername')
-        print('Connection from {}'.format(peername))
+        #print('Connection from {}'.format(peername))
 
     # print incoming data
     def data_received(self, data):
@@ -66,7 +66,7 @@ class EchoServerProtocol(asyncio.Protocol):
         time = datetime_obj.strftime("%H:%M:%S")      
 
         # print data to terminal
-        print(f"Dev ADDR: {dev_addr}, RSSI: {rssi}, SNR: {snr}")
+        #print(f"Dev ADDR: {dev_addr}, RSSI: {rssi}, SNR: {snr}")
         print(f"CO2: {co2}ppm, CO: {co}ppm, Temperature: {temp}°C")
         
         file.write(f'{time},{co2},{co},{temp}\n') # write to logger
