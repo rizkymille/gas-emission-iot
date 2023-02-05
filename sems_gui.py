@@ -1,7 +1,7 @@
-import socket
 import tkinter as tk
-import threading
+import asyncio
 import struct
+import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -13,9 +13,12 @@ from datetime import datetime
 if not hasattr(Image, 'Resampling'):  # Pillow<9.0
    Image.Resampling = Image
 
-MODE = "TEST"
+MODE = "PROD" # "TEST" mode for DEBUGGING, "PROD" mode for implementation/production
+SERVER = 'localhost'
 PORT = 60000  # Port to listen on (non-privileged ports are > 1023)
 echoDataCount = 0
+file = None
+KEEPDATA_THRESHOLD = 8
 
 # hex to int decrypter
 def hexToInt32(hex):
@@ -31,99 +34,140 @@ def parseMsg(msg):
 
     # slice message
     decoded_payload = decoded_payload.split('/')
-    co2 = decoded_payload[0]
-    co = decoded_payload[1]
-    temp = decoded_payload[2]
+    co2 = float(decoded_payload[0])
+    co = float(decoded_payload[1])
+    temp = float(decoded_payload[2])
 
-    return co2, co, temp
+    return np.array([co2, co, temp])
 
-def listenData():
-    global echoDataCount
-    #SERVER = socket.gethostbyname(socket.gethostname())
+co2_arr = np.array([])
+co_arr = np.array([])
+timeNow_arr = np.array([])
+temp_arr = np.array([])
 
-    SERVER = 'localhost'
+class EchoServerProtocol(asyncio.Protocol):
+    decodedMsg = None
 
-    ADDRESS = (SERVER, PORT)
+    def connection_made(self, transport):
+        '''
+        peername = transport.get_extra_info('peername')
+        print('Connection from {}'.format(peername))
+        self.transport = transport
+        '''
+        pass
 
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def data_received(self, data):
+        global echoDataCount, file
+        global timeNow_arr, co2_arr, co_arr, temp_arr
+        message = data.decode("utf-8")
 
-    server.bind(ADDRESS)
-
-    server.listen()
-
-    file = None
-
-    while not stop_event.wait(1):
-        conn, _ = server.accept()
-        message = conn.recv(1024).decode("utf-8")
         # testing only
         if MODE == "TEST":
             decodedMsg = message.split('/')
-            co2 = decodedMsg[0]
-            co = decodedMsg[1]
-            temp = decodedMsg[2]
-            print(f"CO2: {co2}ppm, CO: {co}ppm, TEMP: {temp}°C")
+            for i in range(0, 2):
+                decodedMsg[i] = float(decodedMsg[i])
+
+            print(f"CO2: {decodedMsg[0]}ppm, CO: {decodedMsg[1]}ppm, TEMP: {decodedMsg[2]}°C")
         # implementation
         else:
-            co2, co, temp = parseMsg(message)
+            decodedMsg = parseMsg(message)
+
+        co2 = decodedMsg[0]
+        co = decodedMsg[1]
+        temp = decodedMsg[2]
+        timeNow = datetime.now().strftime("%H:%M:%S")
+
+        co2_arr = np.append(co2_arr, co2)
+        co_arr = np.append(co_arr, co)
+        temp_arr = np.append(temp_arr, temp)
+        timeNow_arr = np.append(timeNow_arr, timeNow)
+
+        if np.size(timeNow_arr) > KEEPDATA_THRESHOLD:
+            co2_arr = np.delete(co2_arr, 0)
+            co_arr = np.delete(co_arr, 0)
+            temp_arr = np.delete(temp_arr, 0)
+            timeNow_arr = np.delete(timeNow_arr, 0)
+
+            ax1.set_xlim(timeNow_arr[0], timeNow_arr[KEEPDATA_THRESHOLD-1])
+            ax2.set_xlim(timeNow_arr[0], timeNow_arr[KEEPDATA_THRESHOLD-1])
+            ax3.set_xlim(timeNow_arr[0], timeNow_arr[KEEPDATA_THRESHOLD-1])
+            
+        ax1.plot(timeNow_arr, co2_arr, 'r')
+        ax2.plot(timeNow_arr, co_arr, 'b')
+        ax3.plot(timeNow_arr, temp_arr, 'g')
+
+        plt.autoscale()
+
+        canvas.draw()
 
         if MODE != "TEST":
             # get time info for logger
             if (echoDataCount == 0):
-                nowDateTime = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-                file = open(f'SEMS_LOG_{nowDateTime}.csv', 'w')
+                dateTimeNow = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+                file = open(f'SEMS_LOG_{dateTimeNow}.csv', 'w')
                 file.write('Time,CO2,CO,TEMP\n')
                 echoDataCount =+ 1
             else:
-                timeNow = datetime.now().strftime("%H:%M:%S")
                 file.write(f'{timeNow},{co2},{co},{temp}\n') # write to logger
+        
+        figure.canvas.flush_events()
 
-    if MODE != "TEST":
-        file.close()
-
-
+async def update():
+    while loop.is_running():
+        root.update()
+        await asyncio.sleep(0.01)
 
 def quit(event):
-    print("exiting...")
-    stop_event.set()
-    root.quit()
+    loop.stop()
+    if MODE != "TEST":
+        file.close()
+    root.destroy()
 
 if __name__ == '__main__':
     root = tk.Tk()
     root.title("Smart Emission Monitoring System Universitas Indonesia")
-    root.geometry("880x700")
+    root.geometry("900x700")
+    root.configure(background='white')
 
     gbrUI = Image.open("Makara_of_Universitas_Indonesia.png")
     gbrUI = gbrUI.resize((75,75), Image.Resampling.LANCZOS)
     gbrUI = ImageTk.PhotoImage(gbrUI)
 
-    root.columnconfigure(0, weight=1, minsize=20)
-    root.rowconfigure(1, weight=1, minsize=20)
-    root.configure(background='white')
-
-    labeltxt = tk.Label(root, 
+    header = tk.Label(root, 
                         text="Smart Emission Monitoring System Universitas Indonesia", 
                         image=gbrUI,
                         compound='left',
+                        padx=20,
                         font=("Arial", 20),
-                        anchor='w')
-    labeltxt.grid(column=1, row=0, padx=40, pady=5, sticky=tk.W)
-    labeltxt.configure(background='white')
+                        anchor='center')
+    header.grid(padx=40, sticky=tk.NSEW)
+    header.configure(background='white')
 
-    canvas = FigureCanvasTkAgg(plt.gcf(), master=root)
-    canvas.get_tk_widget().grid(column=0, row=1,ipadx=20, ipady=10,columnspan=3, sticky=tk.NSEW)
+    figure, (ax1, ax2, ax3, ax4) = plt.subplots(4,1)
+    ax4.set_visible(False) # buffer axis because matplotlib is buggy when setting last axis limits
+    figure.set_size_inches(5,8)
+    figure.subplots_adjust(hspace=0.5)
 
-    plt.gcf().subplots(3,1)
-    plt.subplots_adjust(hspace=0.5)
+    ax1.set_title("Kadar CO")
+    ax2.set_title("Kadar CO2")
+    ax3.set_title("Suhu")
 
-    stop_event = threading.Event()
+    ax1.set_ylabel("ppm")
+    ax2.set_ylabel("ppm")
+    ax3.set_ylabel("°C")
 
-    thread = threading.Thread(target=listenData)
-    thread.daemon = True
+    canvas = FigureCanvasTkAgg(figure, master=root)
+    canvas.get_tk_widget().grid(row=1, ipadx=20, sticky=tk.NSEW)
 
+    loop = asyncio.get_event_loop()
+    tkTask = loop.create_task(update())
+    tcpServer = loop.create_server(lambda: EchoServerProtocol(), SERVER, PORT)
     root.bind("<Escape>", quit)
 
-    thread.start()
+    server = loop.run_until_complete(tcpServer)
 
-    root.mainloop()
-        
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        if MODE != "TEST":
+            file.close()
