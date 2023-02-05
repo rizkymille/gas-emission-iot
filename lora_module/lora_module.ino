@@ -52,12 +52,9 @@ MG811 CO2_sens(V_RES, ADC_BIT, CO2_SENS_PIN);
 MQUnifiedsensor CO_sens(BOARD, V_RES, ADC_BIT, CO_SENS_PIN, TYPE);
 
 float getTemperatureData() {
-  static String recieve;
-
-  Serial.print("G\0");
+  Serial.print("G");
   
-  static char *terminator = "\0";
-  recieve = Serial.readStringUntil(*terminator);
+  String recieve = Serial.readString();
 
   return recieve.toFloat();
 }

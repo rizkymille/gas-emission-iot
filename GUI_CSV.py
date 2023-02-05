@@ -110,5 +110,5 @@ if __name__ == "__main__" :
 
     plt.gcf().subplots(3,1)
     plt.subplots_adjust(hspace=0.5)
-    ani = FuncAnimation(plt.gcf(), animate, interval=2*SECS_TO_MS, blit=False)
+    #ani = FuncAnimation(plt.gcf(), animate, interval=2*SECS_TO_MS, blit=False)
     root.mainloop()

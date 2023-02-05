@@ -1,0 +1,9 @@
+[submodule "MG811"]
+	path = libraries/MG811
+	url = https://github.com/rizkymille/MG811.git
+[submodule "MAX6675-library"]
+	path = libraries/MAX6675-library
+	url = https://github.com/adafruit/MAX6675-library.git
+[submodule "MQSensorsLib"]
+	path = libraries/MQSensorsLib
+	url = https://github.com/miguel5612/MQSensorsLib.git

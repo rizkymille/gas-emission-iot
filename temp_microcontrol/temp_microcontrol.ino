@@ -12,14 +12,13 @@ void setup() {
 }
 
 void loop() {
-  static float temp;
-  static String recieve;
   
-  if (Serial.available() > 0) recieve = Serial.readStringUntil("\0");
-
-  if (recieve == "G") {
-    temp = thermocouple.readCelsius();
-    delay(100);
-    Serial.print(temp);
+  if (Serial.available() > 0) {
+    String recieve = Serial.readString();
+    if(recieve.equals("G")) {
+      static float temp = thermocouple.readCelsius();
+      delay(100);
+      Serial.print(temp);
+    }
   }
 }
